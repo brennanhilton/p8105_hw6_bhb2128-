@@ -5,6 +5,9 @@ November 26, 2018
 
 -   [Problem 1](#problem-1)
     -   [Load and tidy data](#load-and-tidy-data)
+    -   [Baltimore model](#baltimore-model)
+    -   [Models for all cities](#models-for-all-cities)
+-   [Problem 2](#problem-2)
 
 Problem 1
 =========
@@ -23,6 +26,10 @@ library(tidyverse)
     ## -- Conflicts --------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
+
+``` r
+library(forcats)
+```
 
 ### Load and tidy data
 
@@ -65,6 +72,8 @@ homicides_df = homicides_df %>%
 
 After importing the data, I created a city\_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as solved or unsolved.
 
+### Baltimore model
+
 ``` r
 baltimore_fit = homicides_df %>%
   filter(city_state == "Baltimore, MD") %>% 
@@ -88,6 +97,8 @@ baltimore_fit %>% broom::tidy(conf.int = TRUE) %>%
 | victim\_racenon-white |  2.27|     1.614|      3.203|
 
 The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex.
+
+### Models for all cities
 
 ``` r
 homicides_models = homicides_df %>% 
@@ -155,4 +166,25 @@ homicides_models %>% knitr::kable(digits = 3)
 | Tulsa, OK          | victim\_racenon-white |  1.660|     1.142|      2.432|
 | Washington, DC     | victim\_racenon-white |  1.960|     1.011|      4.005|
 
-The above code creates runs the model that we used above for baltimore on each city\_state.
+The above code uses a map function to run the model that we used with baltimore on each city\_state.
+
+``` r
+homicides_models %>% 
+  mutate(city_state = forcats::fct_reorder(city_state, OR)) %>%
+  ggplot(aes(x = city_state, y = OR)) + 
+      geom_point() +
+      geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+      labs(
+        x = "City, State",
+        y = "Odds Ratio",
+        title = "Odds homicide remains unsolved if non-white compared to white") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+![](hw6_files/figure-markdown_github/unnamed-chunk-1-1.png)
+
+The above plot shows that Boston is the US city with the largest discrepancy in homicide resolutions between white and non-white victims. In Boston, non-white victim homicides are 8.7 times as likely to remain unresolved compared to white victim homicides.
+
+Problem 2
+=========
