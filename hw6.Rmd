@@ -26,10 +26,46 @@ homicides_df = homicides_df %>%
   mutate(victim_race = ifelse(victim_race == "White", "white", "non-white")) %>% 
   mutate(victim_race = as.factor(victim_race)) %>% 
   mutate(victim_race = relevel(victim_race, ref = "white")) %>% 
-  mutate(disposition = ifelse(disposition %in% c("Closed without arrest", "Open/No arrest"), "unsolved", "solved"))
-
-View(homicides_df)
-
+  mutate(resolution = factor(ifelse(
+    disposition %in% c("Closed without arrest", "Open/No arrest"), "unresolved", "resolved")))
 ```
 
 After importing the data, I created a city_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as solved or unsolved. 
+
+```{r baltimore fit}
+baltimore_fit = homicides_df %>%
+  filter(city_state == "Baltimore, MD") %>% 
+  glm(resolution ~ victim_age + victim_race + victim_sex, data = ., family = binomial())
+```
+
+The above code saves a logistic regression to baltimore_glm. The model uses victim age, race, and sex to predict whether the case is resolved or unresolved.
+
+```{r odds ratio}
+baltimore_fit %>% broom::tidy(conf.int = TRUE) %>% 
+  mutate(OR = exp(estimate),
+         conf.low = exp(conf.low),
+         conf.high = exp(conf.high)) %>% 
+  select(term, OR, conf.low, conf.high) %>% 
+  filter(term == "victim_racenon-white") %>% 
+  knitr::kable(digits = 3)
+```
+
+The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex.
+
+```{r all cities fit, warning = FALSE}
+homicides_models = homicides_df %>% 
+  group_by(city_state) %>% 
+  nest() %>% # now we have a list col called data containing all the data for each city state
+  mutate(model = map(data, ~broom::tidy(glm(resolution ~ victim_age + victim_race + victim_sex, data = ., family = binomial()), conf.int = TRUE))) %>%
+  select(-data) %>% 
+  unnest() %>%
+  mutate(OR = exp(estimate),
+         conf.low = exp(conf.low),
+         conf.high = exp(conf.high)) %>% 
+  select(city_state, term, OR, conf.low, conf.high) %>%
+  filter(term == "victim_racenon-white")
+
+homicides_models %>% knitr::kable(digits = 3)
+```
+
+The above code creates runs the model that we used above for baltimore on each city_state.
