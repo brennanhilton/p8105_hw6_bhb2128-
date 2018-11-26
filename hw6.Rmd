@@ -6,3 +6,30 @@ output:
   github_document:
     toc: true
 ---
+# Problem 1
+
+```{r load packages}
+library(tidyverse)
+```
+
+### Load and tidy data
+
+```{r load and tidy data}
+homicides_df = read_csv(file = "./data-homicides-master/homicide-data.csv")
+
+homicides_df = homicides_df %>% 
+  mutate(city_state = str_c(city, ",\ ", state)) %>% 
+  filter(!city_state %in% c("Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL")) %>% 
+  mutate(victim_age = as.numeric(victim_age)) %>% 
+  filter(!is.na(victim_age)) %>% 
+  filter(victim_race != "unknown") %>% 
+  mutate(victim_race = ifelse(victim_race == "White", "white", "non-white")) %>% 
+  mutate(victim_race = as.factor(victim_race)) %>% 
+  mutate(victim_race = relevel(victim_race, ref = "white")) %>% 
+  mutate(disposition = ifelse(disposition %in% c("Closed without arrest", "Open/No arrest"), "unsolved", "solved"))
+
+View(homicides_df)
+
+```
+
+After importing the data, I created a city_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as solved or unsolved. 
