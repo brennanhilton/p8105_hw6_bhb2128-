@@ -6,6 +6,12 @@ output:
   github_document:
     toc: true
 ---
+
+```{r include = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+
 # Problem 1
 
 ```{r load packages}
@@ -18,7 +24,7 @@ library(mgcv)
 ### Load and tidy data
 
 ```{r load and tidy data}
-homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv")
+homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv", na = c("", "NA", "Unknown"))
 
 homicides_df = homicides_df %>% 
   mutate(city_state = str_c(city, ",\ ", state)) %>% 
@@ -33,7 +39,7 @@ homicides_df = homicides_df %>%
     disposition %in% c("Closed without arrest", "Open/No arrest"), "unresolved", "resolved")))
 ```
 
-After importing the data, I created a city_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as solved or unsolved. 
+After importing the data, I created a city_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as unresolved or resolved.
 
 ### Baltimore model
 
@@ -43,7 +49,7 @@ baltimore_fit = homicides_df %>%
   glm(resolution ~ victim_age + victim_race + victim_sex, data = ., family = binomial())
 ```
 
-The above code saves a logistic regression to baltimore_glm. The model uses victim age, race, and sex to predict whether the case is resolved or unresolved.
+The above code saves a logistic regression to baltimore_glm. The model uses victim age, race, and sex to predict whether the case is unresolved.
 
 ```{r odds ratio}
 baltimore_fit %>% broom::tidy(conf.int = TRUE) %>% 
@@ -55,11 +61,11 @@ baltimore_fit %>% broom::tidy(conf.int = TRUE) %>%
   knitr::kable(digits = 3)
 ```
 
-The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex.
+The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex. We can see that non-white victims are 2.27 times as likely as white victims to have their case unresolved. 
 
 ### Models for all cities
 
-```{r all cities fit, warning = FALSE}
+```{r all cities fit}
 homicides_models = homicides_df %>% 
   group_by(city_state) %>% 
   nest() %>% # now we have a list col called data containing all the data for each city state
@@ -77,7 +83,7 @@ homicides_models %>% knitr::kable(digits = 3)
 
 The above code uses a map function to run the model that we used with baltimore on each city_state.
 
-```{r}
+```{r all cities plot}
 homicides_models %>% 
   mutate(city_state = forcats::fct_reorder(city_state, OR)) %>%
   ggplot(aes(x = city_state, y = OR)) + 
@@ -120,10 +126,10 @@ From the code above we see that there is no missing data
 ### Propose model
 
 ```{r models}
-lin_mod1 = lm(bwt ~ delwt + mrace, data = birthweight_df)
-lin_mod2 = lm(bwt ~ delwt + frace, data = birthweight_df)
-lin_mod3 = lm(bwt ~ delwt + mrace + frace, data = birthweight_df)
-lin_mod4 = lm(bwt ~ delwt + mrace*frace, data = birthweight_df)
+lin_mod1 = lm(bwt ~ mheight, data = birthweight_df)
+lin_mod2 = lm(bwt ~ mheight + mrace, data = birthweight_df)
+lin_mod3 = lm(bwt ~ mheight + mrace + momage, data = birthweight_df)
+lin_mod4 = lm(bwt ~ mheight + mrace + momage + delwt, data = birthweight_df)
 
 broom::tidy(lin_mod1)
 broom::tidy(lin_mod2)
@@ -131,7 +137,7 @@ broom::tidy(lin_mod3)
 broom::tidy(lin_mod4)
 ```
 
-I want to see how race of the parents affects birthweight. The above code creates 4 models, one with mother's race, one with father's race, one with both factors, and one with both factors and their interaction.
+I decided to examine models with maternal characteristics. I simply added a new maternal variable into each successive model.
 
 
 ```{r training data}
@@ -141,13 +147,13 @@ cv_df =
 
 The above code uses modelr to do 100 training/testing splits on the birthweight_df. 
 
-```{r run models on training data, warning = FALSE}
+```{r run models on training data}
 cv_df = 
   cv_df %>% 
-  mutate(lin_mod1 = map(train, ~lm(bwt ~ mrace, data = .x)),
-         lin_mod2 = map(train, ~lm(bwt ~ frace, data = .x)),
-         lin_mod3 = map(train, ~lm(bwt ~ mrace + frace, data = .x)),
-         lin_mod4 = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(lin_mod1 = map(train, ~lm(bwt ~ mheight, data = .x)),
+         lin_mod2 = map(train, ~lm(bwt ~ mheight + mrace, data = .x)),
+         lin_mod3 = map(train, ~lm(bwt ~ mheight + mrace + momage, data = .x)),
+         lin_mod4 = map(train, ~lm(bwt ~ mheight + mrace + momage + delwt, data = .x))) %>% 
   mutate(rmse_lin1 = map2_dbl(lin_mod1, test, ~rmse(model = .x, data = .y)),
          rmse_lin2 = map2_dbl(lin_mod2, test, ~rmse(model = .x, data = .y)),
          rmse_lin3 = map2_dbl(lin_mod3, test, ~rmse(model = .x, data = .y)),
@@ -165,7 +171,7 @@ cv_df %>%
   ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
-From the above plots, we see that the full model with mother's race, father's race, and the interaction was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
+From the above plots, we see that the full model with mother's height, race, age, and weight was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
 
 ### Plot residuals and predictions
 
@@ -183,7 +189,7 @@ resid_and_pred %>%
     y = "Residuals"
     ) 
 ```
-show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+Above is a plot of the proposed model residuals against fitted values.
 
 ### Compare proposed model to Jeff's models
 
@@ -196,10 +202,12 @@ cv_df2 =
   cv_df2 %>% 
   mutate(lin_mod5 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
          lin_mod6 = map(train, ~lm(bwt ~ blength*bhead*babysex, data = .x)),
-         proposed_mod = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+         proposed_mod = map(train, ~lm(bwt ~ mheight + mrace + momage + delwt, data = .x)),
+         combined_mod = map(train, ~lm(bwt ~ blength*bhead*babysex + mheight + mrace + momage + delwt, data = .x))) %>% 
   mutate(rmse_mod5 = map2_dbl(lin_mod5, test, ~rmse(model = .x, data = .y)),
          rmse_mod6 = map2_dbl(lin_mod6, test, ~rmse(model = .x, data = .y)),
-         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)))
+         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_combined = map2_dbl(combined_mod, test, ~rmse(model = .x, data = .y)))
 
 cv_df2 %>% 
   select(starts_with("rmse")) %>% 
@@ -209,4 +217,4 @@ cv_df2 %>%
   ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
-From the plot above we see that the best model has head circumference, length, sex, and all interactions (model 6).
+From the plot above we see that Jeff's best model with head circumference, length, sex, and all interactions (model 6) was better than my model (proposed model). However, when I combined my proposed model with Jeff's best model, the RMSE was lower than Jeff's best model (combined model).

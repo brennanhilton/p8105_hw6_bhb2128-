@@ -22,7 +22,7 @@ library(tidyverse)
 
     ## -- Attaching packages ------------------------------------------------------------ tidyverse 1.2.1 --
 
-    ## v ggplot2 2.2.1     v purrr   0.2.5
+    ## v ggplot2 3.1.0     v purrr   0.2.5
     ## v tibble  1.4.2     v dplyr   0.7.6
     ## v tidyr   0.8.1     v stringr 1.3.1
     ## v readr   1.1.1     v forcats 0.3.0
@@ -51,7 +51,7 @@ library(mgcv)
 ### Load and tidy data
 
 ``` r
-homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv")
+homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv", na = c("", "NA", "Unknown"))
 ```
 
     ## Parsed with column specification:
@@ -61,7 +61,7 @@ homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv")
     ##   victim_last = col_character(),
     ##   victim_first = col_character(),
     ##   victim_race = col_character(),
-    ##   victim_age = col_character(),
+    ##   victim_age = col_integer(),
     ##   victim_sex = col_character(),
     ##   city = col_character(),
     ##   state = col_character(),
@@ -84,10 +84,7 @@ homicides_df = homicides_df %>%
     disposition %in% c("Closed without arrest", "Open/No arrest"), "unresolved", "resolved")))
 ```
 
-    ## Warning in evalq(as.numeric(victim_age), <environment>): NAs introduced by
-    ## coercion
-
-After importing the data, I created a city\_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as solved or unsolved.
+After importing the data, I created a city\_state variable. I excluded cities that have errors or do not report race. I converted age to numeric and removed NA age rows. I filtered out unknown race and recoded race as white or non-white, with white as the reference group. I removed unknown race because if the race is unknown, we cannot know if race is white or non-white. I recoded the disposition variavle as unresolved or resolved.
 
 ### Baltimore model
 
@@ -97,7 +94,7 @@ baltimore_fit = homicides_df %>%
   glm(resolution ~ victim_age + victim_race + victim_sex, data = ., family = binomial())
 ```
 
-The above code saves a logistic regression to baltimore\_glm. The model uses victim age, race, and sex to predict whether the case is resolved or unresolved.
+The above code saves a logistic regression to baltimore\_glm. The model uses victim age, race, and sex to predict whether the case is unresolved.
 
 ``` r
 baltimore_fit %>% broom::tidy(conf.int = TRUE) %>% 
@@ -113,7 +110,7 @@ baltimore_fit %>% broom::tidy(conf.int = TRUE) %>%
 |:----------------------|-----:|---------:|----------:|
 | victim\_racenon-white |  2.27|     1.614|      3.203|
 
-The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex.
+The above table shows the estimate and confidence interval of the odds ratio for resolved vs unresolved homicides predicted by race, controling for age and sex. We can see that non-white victims are 2.27 times as likely as white victims to have their case unresolved.
 
 ### Models for all cities
 
@@ -135,53 +132,53 @@ homicides_models %>% knitr::kable(digits = 3)
 
 | city\_state        | term                  |     OR|  conf.low|  conf.high|
 |:-------------------|:----------------------|------:|---------:|----------:|
-| Albuquerque, NM    | victim\_racenon-white |  1.349|     0.823|      2.225|
+| Albuquerque, NM    | victim\_racenon-white |  1.353|     0.820|      2.248|
 | Atlanta, GA        | victim\_racenon-white |  1.328|     0.770|      2.356|
 | Baltimore, MD      | victim\_racenon-white |  2.270|     1.614|      3.203|
 | Baton Rouge, LA    | victim\_racenon-white |  1.498|     0.712|      3.285|
 | Birmingham, AL     | victim\_racenon-white |  0.962|     0.570|      1.635|
-| Boston, MA         | victim\_racenon-white |  8.730|     3.868|     23.525|
-| Buffalo, NY        | victim\_racenon-white |  2.565|     1.409|      4.761|
+| Boston, MA         | victim\_racenon-white |  7.895|     3.504|     21.193|
+| Buffalo, NY        | victim\_racenon-white |  2.549|     1.400|      4.733|
 | Charlotte, NC      | victim\_racenon-white |  1.794|     1.052|      3.194|
 | Chicago, IL        | victim\_racenon-white |  1.779|     1.362|      2.316|
 | Cincinnati, OH     | victim\_racenon-white |  3.141|     1.847|      5.558|
-| Columbus, OH       | victim\_racenon-white |  1.170|     0.867|      1.577|
+| Columbus, OH       | victim\_racenon-white |  1.162|     0.861|      1.567|
 | Denver, CO         | victim\_racenon-white |  1.661|     0.992|      2.796|
-| Detroit, MI        | victim\_racenon-white |  1.536|     1.150|      2.052|
+| Detroit, MI        | victim\_racenon-white |  1.535|     1.150|      2.051|
 | Durham, NC         | victim\_racenon-white |  0.997|     0.408|      2.562|
 | Fort Worth, TX     | victim\_racenon-white |  1.194|     0.791|      1.809|
-| Fresno, CA         | victim\_racenon-white |  2.233|     1.181|      4.498|
+| Fresno, CA         | victim\_racenon-white |  2.248|     1.189|      4.528|
 | Houston, TX        | victim\_racenon-white |  1.146|     0.918|      1.432|
 | Indianapolis, IN   | victim\_racenon-white |  1.982|     1.503|      2.626|
 | Jacksonville, FL   | victim\_racenon-white |  1.519|     1.160|      1.993|
-| Las Vegas, NV      | victim\_racenon-white |  1.324|     1.029|      1.708|
+| Las Vegas, NV      | victim\_racenon-white |  1.311|     1.019|      1.691|
 | Long Beach, CA     | victim\_racenon-white |  1.260|     0.623|      2.638|
 | Los Angeles, CA    | victim\_racenon-white |  1.502|     1.092|      2.078|
 | Louisville, KY     | victim\_racenon-white |  2.552|     1.695|      3.888|
-| Memphis, TN        | victim\_racenon-white |  1.278|     0.862|      1.926|
-| Miami, FL          | victim\_racenon-white |  1.735|     1.135|      2.651|
+| Memphis, TN        | victim\_racenon-white |  1.285|     0.866|      1.937|
+| Miami, FL          | victim\_racenon-white |  1.734|     1.129|      2.661|
 | Milwaukee, wI      | victim\_racenon-white |  1.581|     1.019|      2.511|
 | Minneapolis, MN    | victim\_racenon-white |  1.549|     0.831|      2.933|
-| Nashville, TN      | victim\_racenon-white |  1.113|     0.810|      1.534|
-| New Orleans, LA    | victim\_racenon-white |  2.146|     1.357|      3.400|
-| New York, NY       | victim\_racenon-white |  1.882|     1.012|      3.695|
+| Nashville, TN      | victim\_racenon-white |  1.108|     0.807|      1.528|
+| New Orleans, LA    | victim\_racenon-white |  2.142|     1.354|      3.393|
+| New York, NY       | victim\_racenon-white |  1.880|     1.011|      3.694|
 | Oakland, CA        | victim\_racenon-white |  4.695|     2.391|     10.109|
 | Oklahoma City, OK  | victim\_racenon-white |  1.468|     1.031|      2.096|
-| Omaha, NE          | victim\_racenon-white |  5.920|     3.356|     11.024|
+| Omaha, NE          | victim\_racenon-white |  5.879|     3.334|     10.944|
 | Philadelphia, PA   | victim\_racenon-white |  1.553|     1.176|      2.064|
 | Pittsburgh, PA     | victim\_racenon-white |  3.552|     2.061|      6.359|
 | Richmond, VA       | victim\_racenon-white |  2.235|     0.869|      6.933|
 | San Antonio, TX    | victim\_racenon-white |  1.451|     0.975|      2.181|
 | Sacramento, CA     | victim\_racenon-white |  1.281|     0.742|      2.256|
-| Savannah, GA       | victim\_racenon-white |  1.677|     0.795|      3.640|
+| Savannah, GA       | victim\_racenon-white |  1.653|     0.783|      3.586|
 | San Bernardino, CA | victim\_racenon-white |  1.136|     0.500|      2.540|
 | San Diego, CA      | victim\_racenon-white |  2.069|     1.285|      3.397|
 | San Francisco, CA  | victim\_racenon-white |  2.182|     1.391|      3.472|
 | St. Louis, MO      | victim\_racenon-white |  1.733|     1.222|      2.472|
 | Stockton, CA       | victim\_racenon-white |  2.662|     1.403|      5.172|
 | Tampa, FL          | victim\_racenon-white |  0.863|     0.436|      1.710|
-| Tulsa, OK          | victim\_racenon-white |  1.660|     1.142|      2.432|
-| Washington, DC     | victim\_racenon-white |  1.960|     1.011|      4.005|
+| Tulsa, OK          | victim\_racenon-white |  1.679|     1.155|      2.461|
+| Washington, DC     | victim\_racenon-white |  1.946|     1.003|      3.975|
 
 The above code uses a map function to run the model that we used with baltimore on each city\_state.
 
@@ -199,7 +196,7 @@ homicides_models %>%
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-![](hw6_files/figure-markdown_github/unnamed-chunk-1-1.png)
+![](hw6_files/figure-markdown_github/all%20cities%20plot-1.png)
 
 The above plot shows that Boston is the US city with the largest discrepancy in homicide resolutions between white and non-white victims. In Boston, non-white victim homicides are 8.7 times as likely to remain unresolved compared to white victim homicides.
 
@@ -259,83 +256,63 @@ From the code above we see that there is no missing data
 ### Propose model
 
 ``` r
-lin_mod1 = lm(bwt ~ delwt + mrace, data = birthweight_df)
-lin_mod2 = lm(bwt ~ delwt + frace, data = birthweight_df)
-lin_mod3 = lm(bwt ~ delwt + mrace + frace, data = birthweight_df)
-lin_mod4 = lm(bwt ~ delwt + mrace*frace, data = birthweight_df)
+lin_mod1 = lm(bwt ~ mheight, data = birthweight_df)
+lin_mod2 = lm(bwt ~ mheight + mrace, data = birthweight_df)
+lin_mod3 = lm(bwt ~ mheight + mrace + momage, data = birthweight_df)
+lin_mod4 = lm(bwt ~ mheight + mrace + momage + delwt, data = birthweight_df)
 
 broom::tidy(lin_mod1)
 ```
 
-    ## # A tibble: 5 x 5
+    ## # A tibble: 2 x 5
     ##   term        estimate std.error statistic  p.value
     ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
-    ## 1 (Intercept)  2287.      48.1      47.5   0.      
-    ## 2 delwt           6.70     0.322    20.8   6.94e-92
-    ## 3 mrace2       -316.      14.7     -21.5   6.64e-98
-    ## 4 mrace3         18.5     72.1       0.256 7.98e- 1
-    ## 5 mrace4       -148.      31.7      -4.66  3.28e- 6
+    ## 1 (Intercept)    762.     183.        4.18 3.03e- 5
+    ## 2 mheight         37.0      2.87     12.9  2.18e-37
 
 ``` r
 broom::tidy(lin_mod2)
 ```
 
-    ## # A tibble: 6 x 5
+    ## # A tibble: 5 x 5
     ##   term        estimate std.error statistic  p.value
     ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
-    ## 1 (Intercept)  2279.      47.9     47.6    0.      
-    ## 2 delwt           6.76     0.321   21.1    5.92e-94
-    ## 3 frace2       -317.      14.7    -21.5    6.35e-98
-    ## 4 frace3          3.50    69.7      0.0502 9.60e- 1
-    ## 5 frace4       -150.      31.4     -4.79   1.74e- 6
-    ## 6 frace8        -88.1    125.      -0.704  4.81e- 1
+    ## 1 (Intercept)   1178.     181.        6.49 9.46e-11
+    ## 2 mheight         32.7      2.84     11.5  2.43e-30
+    ## 3 mrace2        -301.      15.2     -19.8  2.72e-83
+    ## 4 mrace3         -77.9     74.3      -1.05 2.94e- 1
+    ## 5 mrace4        -120.      33.5      -3.59 3.38e- 4
 
 ``` r
 broom::tidy(lin_mod3)
 ```
 
-    ## # A tibble: 9 x 5
+    ## # A tibble: 6 x 5
     ##   term        estimate std.error statistic  p.value
     ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
-    ## 1 (Intercept)  2284.      48.1      47.4   0.      
-    ## 2 delwt           6.73     0.322    20.9   1.43e-92
-    ## 3 mrace2       -158.      78.6      -2.01  4.46e- 2
-    ## 4 mrace3         52.6    123.        0.429 6.68e- 1
-    ## 5 mrace4        -69.7     76.8      -0.907 3.64e- 1
-    ## 6 frace2       -161.      78.7      -2.05  4.04e- 2
-    ## 7 frace3        -34.0    118.       -0.287 7.74e- 1
-    ## 8 frace4        -83.5     76.2      -1.10  2.73e- 1
-    ## 9 frace8        -58.9    126.       -0.466 6.42e- 1
+    ## 1 (Intercept)  1137.      184.        6.19 6.38e-10
+    ## 2 mheight        32.3       2.85     11.4  1.58e-29
+    ## 3 mrace2       -293.       16.2     -18.1  1.05e-70
+    ## 4 mrace3        -89.6      74.7      -1.20 2.30e- 1
+    ## 5 mrace4       -116.       33.7      -3.45 5.62e- 4
+    ## 6 momage          2.94      2.03      1.44 1.49e- 1
 
 ``` r
 broom::tidy(lin_mod4)
 ```
 
-    ## # A tibble: 20 x 5
-    ##    term          estimate std.error statistic  p.value
-    ##    <chr>            <dbl>     <dbl>     <dbl>    <dbl>
-    ##  1 (Intercept)    2282.      48.2     47.4    0.      
-    ##  2 delwt             6.75     0.322   21.0    6.50e-93
-    ##  3 mrace2         -273.     177.      -1.55   1.21e- 1
-    ##  4 mrace3         -333.     233.      -1.43   1.53e- 1
-    ##  5 mrace4         -103.     125.      -0.822  4.11e- 1
-    ##  6 frace2         -133.     117.      -1.14   2.54e- 1
-    ##  7 frace3         -173.     165.      -1.05   2.96e- 1
-    ##  8 frace4         -159.     121.      -1.31   1.90e- 1
-    ##  9 frace8         -167.     148.      -1.13   2.60e- 1
-    ## 10 mrace2:frace2    86.1    212.       0.407  6.84e- 1
-    ## 11 mrace3:frace2   145.     534.       0.272  7.86e- 1
-    ## 12 mrace4:frace2    16.7    289.       0.0576 9.54e- 1
-    ## 13 mrace2:frace3   280.     525.       0.533  5.94e- 1
-    ## 14 mrace3:frace3   561.     296.       1.90   5.80e- 2
-    ## 15 mrace4:frace3  -116.     510.      -0.227  8.20e- 1
-    ## 16 mrace2:frace4   171.     270.       0.632  5.27e- 1
-    ## 17 mrace3:frace4  1030.     535.       1.92   5.43e- 2
-    ## 18 mrace4:frace4   110.     176.       0.624  5.33e- 1
-    ## 19 mrace2:frace8   634.     354.       1.79   7.32e- 2
-    ## 20 mrace3:frace8   319.     542.       0.589  5.56e- 1
+    ## # A tibble: 7 x 5
+    ##   term         estimate std.error statistic  p.value
+    ##   <chr>           <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  1610.      179.        8.97  4.34e-19
+    ## 2 mheight        11.6       3.00      3.87  1.12e- 4
+    ## 3 mrace2       -308.       15.6     -19.7   1.13e-82
+    ## 4 mrace3         20.4      72.5       0.281 7.79e- 1
+    ## 5 mrace4       -119.       32.5      -3.67  2.50e- 4
+    ## 6 momage          0.847     1.97      0.430 6.67e- 1
+    ## 7 delwt           6.14      0.351    17.5   3.28e-66
 
-I want to see how race of the parents affects birthweight. The above code creates 4 models, one with mother's race, one with father's race, one with both factors, and one with both factors and their interaction.
+I decided to examine models with maternal characteristics. I simply added a new maternal variable into each successive model.
 
 ``` r
 cv_df = 
@@ -347,10 +324,10 @@ The above code uses modelr to do 100 training/testing splits on the birthweight\
 ``` r
 cv_df = 
   cv_df %>% 
-  mutate(lin_mod1 = map(train, ~lm(bwt ~ mrace, data = .x)),
-         lin_mod2 = map(train, ~lm(bwt ~ frace, data = .x)),
-         lin_mod3 = map(train, ~lm(bwt ~ mrace + frace, data = .x)),
-         lin_mod4 = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(lin_mod1 = map(train, ~lm(bwt ~ mheight, data = .x)),
+         lin_mod2 = map(train, ~lm(bwt ~ mheight + mrace, data = .x)),
+         lin_mod3 = map(train, ~lm(bwt ~ mheight + mrace + momage, data = .x)),
+         lin_mod4 = map(train, ~lm(bwt ~ mheight + mrace + momage + delwt, data = .x))) %>% 
   mutate(rmse_lin1 = map2_dbl(lin_mod1, test, ~rmse(model = .x, data = .y)),
          rmse_lin2 = map2_dbl(lin_mod2, test, ~rmse(model = .x, data = .y)),
          rmse_lin3 = map2_dbl(lin_mod3, test, ~rmse(model = .x, data = .y)),
@@ -370,25 +347,14 @@ cv_df %>%
 
 ![](hw6_files/figure-markdown_github/proposed%20model%20plot-1.png)
 
-From the above plots, we see that the full model with mother's race, father's race, and the interaction was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
+From the above plots, we see that the full model with mother's height, race, age, and weight was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
 
 ### Plot residuals and predictions
 
 ``` r
 resid = modelr::add_residuals(birthweight_df, lin_mod4)
-```
-
-    ## Warning in predict.lm(model, data): prediction from a rank-deficient fit
-    ## may be misleading
-
-``` r
 resid_and_pred = modelr::add_predictions(resid, lin_mod4)
-```
 
-    ## Warning in predict.lm(model, data): prediction from a rank-deficient fit
-    ## may be misleading
-
-``` r
 resid_and_pred %>% 
   ggplot(aes(x = pred, y = resid)) +
   geom_point() +
@@ -399,7 +365,7 @@ resid_and_pred %>%
     ) 
 ```
 
-![](hw6_files/figure-markdown_github/pred%20and%20resid%20plot-1.png) show a plot of model residuals against fitted values – use add\_predictions and add\_residuals in making this plot.
+![](hw6_files/figure-markdown_github/pred%20and%20resid%20plot-1.png) Above is a plot of the proposed model residuals against fitted values.
 
 ### Compare proposed model to Jeff's models
 
@@ -411,10 +377,12 @@ cv_df2 =
   cv_df2 %>% 
   mutate(lin_mod5 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
          lin_mod6 = map(train, ~lm(bwt ~ blength*bhead*babysex, data = .x)),
-         proposed_mod = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+         proposed_mod = map(train, ~lm(bwt ~ mheight + mrace + momage + delwt, data = .x)),
+         combined_mod = map(train, ~lm(bwt ~ blength*bhead*babysex + mheight + mrace + momage + delwt, data = .x))) %>% 
   mutate(rmse_mod5 = map2_dbl(lin_mod5, test, ~rmse(model = .x, data = .y)),
          rmse_mod6 = map2_dbl(lin_mod6, test, ~rmse(model = .x, data = .y)),
-         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)))
+         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_combined = map2_dbl(combined_mod, test, ~rmse(model = .x, data = .y)))
 
 cv_df2 %>% 
   select(starts_with("rmse")) %>% 
@@ -426,4 +394,4 @@ cv_df2 %>%
 
 ![](hw6_files/figure-markdown_github/compare%20to%20jeffs%20models-1.png)
 
-From the plot above we see that the best model has head circumference, length, sex, and all interactions (model 6).
+From the plot above we see that Jeff's best model with head circumference, length, sex, and all interactions (model 6) was better than my model (proposed model). However, when I combined my proposed model with Jeff's best model, the RMSE was lower than Jeff's best model (combined model).
