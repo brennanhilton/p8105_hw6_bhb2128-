@@ -11,12 +11,14 @@ output:
 ```{r load packages}
 library(tidyverse)
 library(forcats)
+library(modelr)
+library(mgcv)
 ```
 
 ### Load and tidy data
 
 ```{r load and tidy data}
-homicides_df = read_csv(file = "./data-homicides-master/homicide-data.csv")
+homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv")
 
 homicides_df = homicides_df %>% 
   mutate(city_state = str_c(city, ",\ ", state)) %>% 
@@ -92,3 +94,119 @@ homicides_models %>%
 The above plot shows that Boston is the US city with the largest discrepancy in homicide resolutions between white and non-white victims. In Boston, non-white victim homicides are 8.7 times as likely to remain unresolved compared to white victim homicides.
 
 # Problem 2
+
+### Load and tidy data
+
+```{r load and tidy birthweight data}
+birthweight_df = read_csv(file = "./data/birthweight.csv")
+
+birthweight_df = birthweight_df %>% 
+   mutate(
+      babysex = as.factor(babysex),
+      frace = as.factor(frace),
+      malform = as.factor(malform),
+      mrace = as.factor(mrace))
+```
+
+The code above loads the data and converts sex, mother's race, father's race, and birth malformation into factor variables.
+
+```{r missing data}
+birthweight_df %>% 
+  is.na() %>% summary()
+```
+
+From the code above we see that there is no missing data
+
+### Propose model
+
+```{r models}
+lin_mod1 = lm(bwt ~ delwt + mrace, data = birthweight_df)
+lin_mod2 = lm(bwt ~ delwt + frace, data = birthweight_df)
+lin_mod3 = lm(bwt ~ delwt + mrace + frace, data = birthweight_df)
+lin_mod4 = lm(bwt ~ delwt + mrace*frace, data = birthweight_df)
+
+broom::tidy(lin_mod1)
+broom::tidy(lin_mod2)
+broom::tidy(lin_mod3)
+broom::tidy(lin_mod4)
+```
+
+I want to see how race of the parents affects birthweight. The above code creates 4 models, one with mother's race, one with father's race, one with both factors, and one with both factors and their interaction.
+
+
+```{r training data}
+cv_df = 
+  crossv_mc(birthweight_df, 100)
+```
+
+The above code uses modelr to do 100 training/testing splits on the birthweight_df. 
+
+```{r run models on training data, warning = FALSE}
+cv_df = 
+  cv_df %>% 
+  mutate(lin_mod1 = map(train, ~lm(bwt ~ mrace, data = .x)),
+         lin_mod2 = map(train, ~lm(bwt ~ frace, data = .x)),
+         lin_mod3 = map(train, ~lm(bwt ~ mrace + frace, data = .x)),
+         lin_mod4 = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(rmse_lin1 = map2_dbl(lin_mod1, test, ~rmse(model = .x, data = .y)),
+         rmse_lin2 = map2_dbl(lin_mod2, test, ~rmse(model = .x, data = .y)),
+         rmse_lin3 = map2_dbl(lin_mod3, test, ~rmse(model = .x, data = .y)),
+         rmse_lin4 = map2_dbl(lin_mod4, test, ~rmse(model = .x, data = .y)))
+```
+
+The above code fits the 4 proposed models and gets RMSEs
+
+```{r proposed model plot}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+From the above plots, we see that the full model with mother's race, father's race, and the interaction was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
+
+### Plot residuals and predictions
+
+
+```{r pred and resid plot}
+resid = modelr::add_residuals(birthweight_df, lin_mod4)
+resid_and_pred = modelr::add_predictions(resid, lin_mod4)
+
+resid_and_pred %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point() +
+  labs(
+    title = "Model",
+    x = "Predictions",
+    y = "Residuals"
+    ) 
+```
+show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+
+### Compare proposed model to Jeff's models
+
+```{r compare to jeffs models, warning = FALSE}
+
+cv_df2 = 
+  crossv_mc(birthweight_df, 100)
+
+cv_df2 = 
+  cv_df2 %>% 
+  mutate(lin_mod5 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         lin_mod6 = map(train, ~lm(bwt ~ blength*bhead*babysex, data = .x)),
+         proposed_mod = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(rmse_mod5 = map2_dbl(lin_mod5, test, ~rmse(model = .x, data = .y)),
+         rmse_mod6 = map2_dbl(lin_mod6, test, ~rmse(model = .x, data = .y)),
+         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)))
+
+cv_df2 %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+From the plot above we see that the best model has head circumference, length, sex, and all interactions (model 6).

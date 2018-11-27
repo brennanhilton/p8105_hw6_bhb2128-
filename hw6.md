@@ -8,6 +8,10 @@ November 26, 2018
     -   [Baltimore model](#baltimore-model)
     -   [Models for all cities](#models-for-all-cities)
 -   [Problem 2](#problem-2)
+    -   [Load and tidy data](#load-and-tidy-data-1)
+    -   [Propose model](#propose-model)
+    -   [Plot residuals and predictions](#plot-residuals-and-predictions)
+    -   [Compare proposed model to Jeff's models](#compare-proposed-model-to-jeffs-models)
 
 Problem 1
 =========
@@ -29,12 +33,25 @@ library(tidyverse)
 
 ``` r
 library(forcats)
+library(modelr)
+library(mgcv)
 ```
+
+    ## Loading required package: nlme
+
+    ## 
+    ## Attaching package: 'nlme'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     collapse
+
+    ## This is mgcv 1.8-25. For overview type 'help("mgcv-package")'.
 
 ### Load and tidy data
 
 ``` r
-homicides_df = read_csv(file = "./data-homicides-master/homicide-data.csv")
+homicides_df = read_csv(file = "./data/data-homicides-master/homicide-data.csv")
 ```
 
     ## Parsed with column specification:
@@ -188,3 +205,225 @@ The above plot shows that Boston is the US city with the largest discrepancy in 
 
 Problem 2
 =========
+
+### Load and tidy data
+
+``` r
+birthweight_df = read_csv(file = "./data/birthweight.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   .default = col_integer(),
+    ##   gaweeks = col_double(),
+    ##   ppbmi = col_double(),
+    ##   smoken = col_double()
+    ## )
+
+    ## See spec(...) for full column specifications.
+
+``` r
+birthweight_df = birthweight_df %>% 
+   mutate(
+      babysex = as.factor(babysex),
+      frace = as.factor(frace),
+      malform = as.factor(malform),
+      mrace = as.factor(mrace))
+```
+
+The code above loads the data and converts sex, mother's race, father's race, and birth malformation into factor variables.
+
+``` r
+birthweight_df %>% 
+  is.na() %>% summary()
+```
+
+    ##   babysex          bhead          blength           bwt         
+    ##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+    ##  FALSE:4342      FALSE:4342      FALSE:4342      FALSE:4342     
+    ##    delwt          fincome          frace          gaweeks       
+    ##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+    ##  FALSE:4342      FALSE:4342      FALSE:4342      FALSE:4342     
+    ##   malform         menarche        mheight          momage       
+    ##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+    ##  FALSE:4342      FALSE:4342      FALSE:4342      FALSE:4342     
+    ##    mrace           parity         pnumlbw         pnumsga       
+    ##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+    ##  FALSE:4342      FALSE:4342      FALSE:4342      FALSE:4342     
+    ##    ppbmi            ppwt           smoken          wtgain       
+    ##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+    ##  FALSE:4342      FALSE:4342      FALSE:4342      FALSE:4342
+
+From the code above we see that there is no missing data
+
+### Propose model
+
+``` r
+lin_mod1 = lm(bwt ~ delwt + mrace, data = birthweight_df)
+lin_mod2 = lm(bwt ~ delwt + frace, data = birthweight_df)
+lin_mod3 = lm(bwt ~ delwt + mrace + frace, data = birthweight_df)
+lin_mod4 = lm(bwt ~ delwt + mrace*frace, data = birthweight_df)
+
+broom::tidy(lin_mod1)
+```
+
+    ## # A tibble: 5 x 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  2287.      48.1      47.5   0.      
+    ## 2 delwt           6.70     0.322    20.8   6.94e-92
+    ## 3 mrace2       -316.      14.7     -21.5   6.64e-98
+    ## 4 mrace3         18.5     72.1       0.256 7.98e- 1
+    ## 5 mrace4       -148.      31.7      -4.66  3.28e- 6
+
+``` r
+broom::tidy(lin_mod2)
+```
+
+    ## # A tibble: 6 x 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  2279.      47.9     47.6    0.      
+    ## 2 delwt           6.76     0.321   21.1    5.92e-94
+    ## 3 frace2       -317.      14.7    -21.5    6.35e-98
+    ## 4 frace3          3.50    69.7      0.0502 9.60e- 1
+    ## 5 frace4       -150.      31.4     -4.79   1.74e- 6
+    ## 6 frace8        -88.1    125.      -0.704  4.81e- 1
+
+``` r
+broom::tidy(lin_mod3)
+```
+
+    ## # A tibble: 9 x 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  2284.      48.1      47.4   0.      
+    ## 2 delwt           6.73     0.322    20.9   1.43e-92
+    ## 3 mrace2       -158.      78.6      -2.01  4.46e- 2
+    ## 4 mrace3         52.6    123.        0.429 6.68e- 1
+    ## 5 mrace4        -69.7     76.8      -0.907 3.64e- 1
+    ## 6 frace2       -161.      78.7      -2.05  4.04e- 2
+    ## 7 frace3        -34.0    118.       -0.287 7.74e- 1
+    ## 8 frace4        -83.5     76.2      -1.10  2.73e- 1
+    ## 9 frace8        -58.9    126.       -0.466 6.42e- 1
+
+``` r
+broom::tidy(lin_mod4)
+```
+
+    ## # A tibble: 20 x 5
+    ##    term          estimate std.error statistic  p.value
+    ##    <chr>            <dbl>     <dbl>     <dbl>    <dbl>
+    ##  1 (Intercept)    2282.      48.2     47.4    0.      
+    ##  2 delwt             6.75     0.322   21.0    6.50e-93
+    ##  3 mrace2         -273.     177.      -1.55   1.21e- 1
+    ##  4 mrace3         -333.     233.      -1.43   1.53e- 1
+    ##  5 mrace4         -103.     125.      -0.822  4.11e- 1
+    ##  6 frace2         -133.     117.      -1.14   2.54e- 1
+    ##  7 frace3         -173.     165.      -1.05   2.96e- 1
+    ##  8 frace4         -159.     121.      -1.31   1.90e- 1
+    ##  9 frace8         -167.     148.      -1.13   2.60e- 1
+    ## 10 mrace2:frace2    86.1    212.       0.407  6.84e- 1
+    ## 11 mrace3:frace2   145.     534.       0.272  7.86e- 1
+    ## 12 mrace4:frace2    16.7    289.       0.0576 9.54e- 1
+    ## 13 mrace2:frace3   280.     525.       0.533  5.94e- 1
+    ## 14 mrace3:frace3   561.     296.       1.90   5.80e- 2
+    ## 15 mrace4:frace3  -116.     510.      -0.227  8.20e- 1
+    ## 16 mrace2:frace4   171.     270.       0.632  5.27e- 1
+    ## 17 mrace3:frace4  1030.     535.       1.92   5.43e- 2
+    ## 18 mrace4:frace4   110.     176.       0.624  5.33e- 1
+    ## 19 mrace2:frace8   634.     354.       1.79   7.32e- 2
+    ## 20 mrace3:frace8   319.     542.       0.589  5.56e- 1
+
+I want to see how race of the parents affects birthweight. The above code creates 4 models, one with mother's race, one with father's race, one with both factors, and one with both factors and their interaction.
+
+``` r
+cv_df = 
+  crossv_mc(birthweight_df, 100)
+```
+
+The above code uses modelr to do 100 training/testing splits on the birthweight\_df.
+
+``` r
+cv_df = 
+  cv_df %>% 
+  mutate(lin_mod1 = map(train, ~lm(bwt ~ mrace, data = .x)),
+         lin_mod2 = map(train, ~lm(bwt ~ frace, data = .x)),
+         lin_mod3 = map(train, ~lm(bwt ~ mrace + frace, data = .x)),
+         lin_mod4 = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(rmse_lin1 = map2_dbl(lin_mod1, test, ~rmse(model = .x, data = .y)),
+         rmse_lin2 = map2_dbl(lin_mod2, test, ~rmse(model = .x, data = .y)),
+         rmse_lin3 = map2_dbl(lin_mod3, test, ~rmse(model = .x, data = .y)),
+         rmse_lin4 = map2_dbl(lin_mod4, test, ~rmse(model = .x, data = .y)))
+```
+
+The above code fits the 4 proposed models and gets RMSEs
+
+``` r
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+![](hw6_files/figure-markdown_github/proposed%20model%20plot-1.png)
+
+From the above plots, we see that the full model with mother's race, father's race, and the interaction was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
+
+### Plot residuals and predictions
+
+``` r
+resid = modelr::add_residuals(birthweight_df, lin_mod4)
+```
+
+    ## Warning in predict.lm(model, data): prediction from a rank-deficient fit
+    ## may be misleading
+
+``` r
+resid_and_pred = modelr::add_predictions(resid, lin_mod4)
+```
+
+    ## Warning in predict.lm(model, data): prediction from a rank-deficient fit
+    ## may be misleading
+
+``` r
+resid_and_pred %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point() +
+  labs(
+    title = "Model",
+    x = "Predictions",
+    y = "Residuals"
+    ) 
+```
+
+![](hw6_files/figure-markdown_github/pred%20and%20resid%20plot-1.png) show a plot of model residuals against fitted values – use add\_predictions and add\_residuals in making this plot.
+
+### Compare proposed model to Jeff's models
+
+``` r
+cv_df2 = 
+  crossv_mc(birthweight_df, 100)
+
+cv_df2 = 
+  cv_df2 %>% 
+  mutate(lin_mod5 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         lin_mod6 = map(train, ~lm(bwt ~ blength*bhead*babysex, data = .x)),
+         proposed_mod = map(train, ~lm(bwt ~ mrace*frace, data = .x))) %>% 
+  mutate(rmse_mod5 = map2_dbl(lin_mod5, test, ~rmse(model = .x, data = .y)),
+         rmse_mod6 = map2_dbl(lin_mod6, test, ~rmse(model = .x, data = .y)),
+         rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)))
+
+cv_df2 %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+![](hw6_files/figure-markdown_github/compare%20to%20jeffs%20models-1.png)
+
+From the plot above we see that the best model has head circumference, length, sex, and all interactions (model 6).
