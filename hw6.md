@@ -20,14 +20,14 @@ Problem 1
 library(tidyverse)
 ```
 
-    ## -- Attaching packages ------------------------------------------------------------ tidyverse 1.2.1 --
+    ## -- Attaching packages ------------------------------------------------------------------------------------- tidyverse 1.2.1 --
 
     ## v ggplot2 3.1.0     v purrr   0.2.5
     ## v tibble  1.4.2     v dplyr   0.7.6
     ## v tidyr   0.8.1     v stringr 1.3.1
     ## v readr   1.1.1     v forcats 0.3.0
 
-    ## -- Conflicts --------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts ---------------------------------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -394,4 +394,4 @@ cv_df2 %>%
 
 ![](hw6_files/figure-markdown_github/compare%20to%20jeffs%20models-1.png)
 
-From the plot above we see that Jeff's best model with head circumference, length, sex, and all interactions (model 6) was better than my model (proposed model). However, when I combined my proposed model with Jeff's best model, the RMSE was lower than Jeff's best model (combined model).
+The same cross validation procedures outlined above were performed to compare my proposed model with Jeff's models. From the plot above we see that Jeff's best model with head circumference, length, sex, and all interactions (model 6) was better than my model (proposed model). However, when I combined my proposed model with Jeff's best model, the RMSE was lower than Jeff's best model (combined model).
