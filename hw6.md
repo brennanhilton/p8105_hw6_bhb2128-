@@ -20,14 +20,14 @@ Problem 1
 library(tidyverse)
 ```
 
-    ## -- Attaching packages ------------------------------------------------------------------------------------- tidyverse 1.2.1 --
+    ## -- Attaching packages ------------------------------------------------------------ tidyverse 1.2.1 --
 
     ## v ggplot2 3.1.0     v purrr   0.2.5
     ## v tibble  1.4.2     v dplyr   0.7.6
     ## v tidyr   0.8.1     v stringr 1.3.1
     ## v readr   1.1.1     v forcats 0.3.0
 
-    ## -- Conflicts ---------------------------------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts --------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -342,7 +342,13 @@ cv_df %>%
   gather(key = model, value = rmse) %>% 
   mutate(model = str_replace(model, "rmse_", ""),
          model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    title = "Model comparison",
+    x = "model",
+    y = "rmse"
+    ) 
 ```
 
 ![](hw6_files/figure-markdown_github/proposed%20model%20plot-1.png)
@@ -359,7 +365,7 @@ resid_and_pred %>%
   ggplot(aes(x = pred, y = resid)) +
   geom_point() +
   labs(
-    title = "Model",
+    title = "Proposed Model",
     x = "Predictions",
     y = "Residuals"
     ) 
@@ -389,7 +395,13 @@ cv_df2 %>%
   gather(key = model, value = rmse) %>% 
   mutate(model = str_replace(model, "rmse_", ""),
          model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    title = "Model comparison",
+    x = "model",
+    y = "rmse"
+    ) 
 ```
 
 ![](hw6_files/figure-markdown_github/compare%20to%20jeffs%20models-1.png)

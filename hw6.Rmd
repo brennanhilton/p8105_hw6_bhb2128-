@@ -168,7 +168,13 @@ cv_df %>%
   gather(key = model, value = rmse) %>% 
   mutate(model = str_replace(model, "rmse_", ""),
          model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    title = "Model comparison",
+    x = "model",
+    y = "rmse"
+    ) 
 ```
 
 From the above plots, we see that the full model with mother's height, race, age, and weight was the best model because on average, it produced the lowest RMSEs when run with 100 training datasets.
@@ -184,7 +190,7 @@ resid_and_pred %>%
   ggplot(aes(x = pred, y = resid)) +
   geom_point() +
   labs(
-    title = "Model",
+    title = "Proposed Model",
     x = "Predictions",
     y = "Residuals"
     ) 
@@ -214,7 +220,13 @@ cv_df2 %>%
   gather(key = model, value = rmse) %>% 
   mutate(model = str_replace(model, "rmse_", ""),
          model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    title = "Model comparison",
+    x = "model",
+    y = "rmse"
+    ) 
 ```
 
 The same cross validation procedures outlined above were performed to compare my proposed model with Jeff's models. From the plot above we see that Jeff's best model with head circumference, length, sex, and all interactions (model 6) was better than my model (proposed model). However, when I combined my proposed model with Jeff's best model, the RMSE was lower than Jeff's best model (combined model).
