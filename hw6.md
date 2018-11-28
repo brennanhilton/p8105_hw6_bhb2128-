@@ -365,7 +365,7 @@ resid_and_pred %>%
     ) 
 ```
 
-![](hw6_files/figure-markdown_github/pred%20and%20resid%20plot-1.png) Above is a plot of the proposed model residuals against fitted values.
+![](hw6_files/figure-markdown_github/pred%20and%20resid%20plot-1.png) Above is a plot of the proposed model residuals against fitted values. Points are clustered nicely around 0 and there is no odd pattern, which is good! A linear model seems appropriate for these data.
 
 ### Compare proposed model to Jeff's models
 
